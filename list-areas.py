@@ -2,8 +2,6 @@ from theses import *
 
 if __name__ == '__main__':
     spider = ThesisSpider()
-#    for t in spider.get_masters_thesis():
-#        print unicode(t)
     print 'Showing all areas that have at least 100 thesis:'
     areas = []
     n = 0
