@@ -88,6 +88,6 @@ if __name__ == '__main__':
     spider = ThesisSpider()
 #    for t in spider.get_masters_thesis():
 #        print unicode(t)
-    for i in range(10):
+    for i in range(15):
         for a in spider.areas(page=i):
             print a['name'], a['size']
