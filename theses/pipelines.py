@@ -6,19 +6,25 @@
 from scrapy.exceptions import DropItem
 from scrapy.conf import settings
 
+from theses.spiders.usp import *
+
 from pymongo import Connection
 db = Connection().theses
 
 class LowPassPipeline(object):
     def process_item(self, item, spider):
-        if item['size'] < settings['MINIMUM_SIZE']:
-            raise DropItem('Size is lower than MINIMUM_SIZE (%d < %d)' % (item['size'], settings['MINIMUM_SIZE']))
+        if isinstance(spider, USPSpider):
+            if item['size'] < settings['MINIMUM_SIZE']:
+                raise DropItem('Size is lower than MINIMUM_SIZE (%d < %d)' % (item['size'], settings['MINIMUM_SIZE']))
+            return item
         return item
 
 class DBDumpPipeline(object):
     def process_item(self, item, spider):
-        print dict(item)
-        db.fields.insert(dict(item))
+        if isinstance(spider, USPSpider):
+            db.fields.insert(dict(item))
+        elif isinstance(spider, USPThesisSpider):
+            db.theses.insert(dict(item))
 
 class ThesesPipeline(object):
     def process_item(self, item, spider):

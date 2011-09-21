@@ -7,7 +7,12 @@ from scrapy.item import Item, Field
 
 class ThesesItem(Item):
     author = Field()
+    url = Field()
     title = Field()
+    field = Field()
+    type = Field()
+    dept = Field()
+    year = Field()
     data = Field()
 
 class FieldItem(Item):
