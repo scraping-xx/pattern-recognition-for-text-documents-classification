@@ -26,7 +26,7 @@ class DBDumpPipeline(object):
         try:
             if isinstance(spider, USPSpider):
                 db.fields.insert(dict(item), safe=True)
-            elif isinstance(spider, USPThesisSpider):
+            elif isinstance(spider, USPListThesisSpider):
                 db.theses.insert(dict(item), safe=True)
         except:
             raise DropItem('Item already added')

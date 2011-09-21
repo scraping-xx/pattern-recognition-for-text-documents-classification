@@ -8,6 +8,7 @@
 
 BOT_NAME = 'ufcg-pattern-recog-AndreDieb'
 BOT_VERSION = '1.0'
+LOG_LEVEL='INFO'
 
 SPIDER_MODULES = ['theses.spiders']
 NEWSPIDER_MODULE = 'theses.spiders'

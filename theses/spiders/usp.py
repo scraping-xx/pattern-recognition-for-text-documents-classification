@@ -6,6 +6,9 @@ from urlparse import urljoin
 from theses.items import *
 from pymongo import Connection
 
+import tempfile
+import os
+
 
 class USPSpider(BaseSpider):
     name = "usp"
@@ -28,8 +31,8 @@ class USPSpider(BaseSpider):
             item['url'] = urljoin(self.base_url, f.select('./div[@class="dadosAreaNome"]/a/@href').extract()[0])
             yield item
 
-class USPThesisSpider(BaseSpider):
-    name = 'usp-thesis'
+class USPListThesisSpider(BaseSpider):
+    name = 'usp-list-thesis'
     allowed_domains = ['teses.usp.br']
     start_urls = []
     base_url = 'http://www.teses.usp.br'
@@ -56,3 +59,39 @@ class USPThesisSpider(BaseSpider):
             item['dept'] = f.select('.//div[@class="dadosDocUnidade"]/a/text()').extract()[0]
             item['year'] = int(f.select('.//div[@class="dadosDocAno"]/a/text()').extract()[0])
             yield item
+
+class USPThesisSpider(BaseSpider):
+    name = 'usp-download-thesis'
+    allowed_domains = [ 'teses.usp.br']
+    start_urls = []
+    base_url = 'http://www.teses.usp.br'
+    db = Connection().theses
+
+    def start_requests(self):
+        for t in self.db.theses.find():
+            request = Request(t['url'], callback=self.parse)
+            request.meta['thesis'] = t
+            yield request
+
+    def parse(self, response):
+        hxs = HtmlXPathSelector(response)
+        all_a = hxs.select('//a')
+        for a in all_a:
+            text = a.select('text()').extract()
+            if len(text) > 0 and text[0].endswith('.pdf'):
+                url = urljoin(self.base_url, a.select('@href').extract()[0])
+                request = Request(url, callback=self.put_document)
+                request.meta['thesis'] = response.meta['thesis']
+                yield request
+
+    def put_document(self, response):
+        thesis = response.meta['thesis']
+
+        t = tempfile.NamedTemporaryFile()
+        t.write(response.body)
+        t.flush()
+        os.system('pdftotext %s' % t.name)
+
+        thesis['data'] = open(t.name + '.txt').read()
+        print 'Saving thesis', thesis['author'], len(thesis['data'])
+        self.db.theses.save(thesis)
