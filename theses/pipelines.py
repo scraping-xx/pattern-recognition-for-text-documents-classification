@@ -10,6 +10,8 @@ from theses.spiders.usp import *
 
 from pymongo import Connection
 db = Connection().theses
+db.fields.ensure_index('name')
+db.theses.ensure_index('author')
 
 class LowPassPipeline(object):
     def process_item(self, item, spider):

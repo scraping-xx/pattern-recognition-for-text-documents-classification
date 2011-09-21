@@ -48,7 +48,7 @@ class USPThesisSpider(BaseSpider):
             print 'finished listing thesis from field'
         for f in hxs.select('//div[@class="dadosLinha dadosCor1"] | //div[@class="dadosLinha dadosCor2"]'):
             item = ThesesItem()
-            item['author'] = f.select('.//div[@class="dadosDocNome"]/a/text()').extract()
+            item['author'] = f.select('.//div[@class="dadosDocNome"]/a/text()').extract()[0]
             item['url'] = f.select('.//div[@class="dadosDocNome"]/a/@href').extract()[0]
             item['title'] = f.select('.//div[@class="dadosDocTitulo"]/text()').extract()[0]
             item['field'] = f.select('.//div[@class="dadosDocArea"]/a/text()').extract()[0]
