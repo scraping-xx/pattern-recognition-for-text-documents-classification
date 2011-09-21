@@ -10,23 +10,28 @@ from theses.spiders.usp import *
 
 from pymongo import Connection
 db = Connection().theses
-db.fields.ensure_index('name')
-db.theses.ensure_index('author')
+db.fields.ensure_index('name', unique=True)
+db.theses.ensure_index('author', unique=True)
 
 class LowPassPipeline(object):
     def process_item(self, item, spider):
         if isinstance(spider, USPSpider):
             if item['size'] < settings['MINIMUM_SIZE']:
-                raise DropItem('Size is lower than MINIMUM_SIZE (%d < %d)' % (item['size'], settings['MINIMUM_SIZE']))
+                raise DropItem('Size is lower than MINIMUM_SIZE (%d)' % settings['MINIMUM_SIZE'])
             return item
         return item
 
 class DBDumpPipeline(object):
     def process_item(self, item, spider):
-        if isinstance(spider, USPSpider):
-            db.fields.insert(dict(item))
-        elif isinstance(spider, USPThesisSpider):
-            db.theses.insert(dict(item))
+        try:
+            if isinstance(spider, USPSpider):
+                db.fields.insert(dict(item), safe=True)
+            elif isinstance(spider, USPThesisSpider):
+                db.theses.insert(dict(item), safe=True)
+        except:
+            raise DropItem('Item already added')
+
+        return item
 
 class ThesesPipeline(object):
     def process_item(self, item, spider):
