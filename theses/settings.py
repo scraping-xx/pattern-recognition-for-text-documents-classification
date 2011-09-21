@@ -6,7 +6,7 @@
 #     http://doc.scrapy.org/topics/settings.html
 #
 
-BOT_NAME = 'theses'
+BOT_NAME = 'ufcg-pattern-recog-AndreDieb'
 BOT_VERSION = '1.0'
 
 SPIDER_MODULES = ['theses.spiders']
