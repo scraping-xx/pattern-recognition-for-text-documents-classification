@@ -24,4 +24,5 @@ class USPSpider(BaseSpider):
             item['name'] = f.select('.//div[@class="dadosAreaNome"]/a/text()').extract()[0]
             item['size'] = int(f.select('.//div[@class="dadosAreaNome"]/text()').extract()[0].replace(' (', '').replace(')', ''))
             item['type'] = f.select('.//div[@class="dadosAreaTipo"]/text()').extract()[0]
+            item['url'] = urljoin(self.base_url, f.select('./div[@class="dadosAreaNome"]/a/@href').extract()[0])
             yield item

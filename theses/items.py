@@ -14,3 +14,4 @@ class FieldItem(Item):
     name = Field()
     size = Field()
     type = Field()
+    url = Field()
