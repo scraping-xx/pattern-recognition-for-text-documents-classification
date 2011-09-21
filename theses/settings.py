@@ -14,7 +14,8 @@ NEWSPIDER_MODULE = 'theses.spiders'
 DEFAULT_ITEM_CLASS = 'theses.items.ThesesItem'
 USER_AGENT = '%s/%s' % (BOT_NAME, BOT_VERSION)
 
-ITEM_PIPELINES = ['theses.pipelines.LowPassPipeline']
+ITEM_PIPELINES = ['theses.pipelines.LowPassPipeline',
+                  'theses.pipelines.DBDumpPipeline']
 
 # Theses-specific settings
 MINIMUM_SIZE = 50
