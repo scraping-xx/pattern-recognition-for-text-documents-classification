@@ -1,6 +1,7 @@
 from scrapy.spider import BaseSpider
 from scrapy.selector import HtmlXPathSelector
 from scrapy.http import Request
+from scrapy.conf import settings
 
 from urlparse import urljoin
 from theses.items import *
@@ -39,8 +40,9 @@ class USPListThesisSpider(BaseSpider):
     db = Connection().theses
 
     def start_requests(self):
-        for f in self.db.fields.find():
-            yield Request(f['url'], callback=self.parse)
+        for f in settings['FIELDS']:
+            field = self.db.fields.find_one({'name': f})
+            yield Request(field['url'], callback=self.parse)
 
     def parse(self, response):
         hxs = HtmlXPathSelector(response)
@@ -69,6 +71,8 @@ class USPThesisSpider(BaseSpider):
 
     def start_requests(self):
         for t in self.db.theses.find():
+            if 'data' in t and len(t['data']) > 10:
+                continue
             request = Request(t['url'], callback=self.parse)
             request.meta['thesis'] = t
             yield request
