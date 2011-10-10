@@ -15,7 +15,7 @@ db.theses.ensure_index('author', unique=True)
 
 class LowPassPipeline(object):
     def process_item(self, item, spider):
-        if isinstance(spider, USPSpider):
+        if isinstance(spider, USPListAreasSpider):
             if item['size'] < settings['MINIMUM_SIZE']:
                 raise DropItem('Size is lower than MINIMUM_SIZE (%d)' % settings['MINIMUM_SIZE'])
             return item
@@ -24,15 +24,10 @@ class LowPassPipeline(object):
 class DBDumpPipeline(object):
     def process_item(self, item, spider):
         try:
-            if isinstance(spider, USPSpider):
+            if isinstance(spider, USPListAreasSpider):
                 db.fields.insert(dict(item), safe=True)
-            elif isinstance(spider, USPListThesisSpider):
+            elif isinstance(spider, USPThesisSpider):
                 db.theses.insert(dict(item), safe=True)
         except:
             raise DropItem('Item already added')
-
-        return item
-
-class ThesesPipeline(object):
-    def process_item(self, item, spider):
         return item

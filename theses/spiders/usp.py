@@ -11,8 +11,10 @@ import tempfile
 import os
 
 
-class USPSpider(BaseSpider):
-    name = "usp"
+class USPListAreasSpider(BaseSpider):
+    """ Lists USP thesis areas (e.g. biology, mechanical engineering, architecture, etc)
+    """
+    name = "usp-list-areas"
     allowed_domains = ['teses.usp.br']
     start_urls = ['http://www.teses.usp.br/index.php?option=com_jumi&fileid=6&Itemid=61&lang=pt-br&pagina=1']
     base_url = 'http://www.teses.usp.br'
@@ -23,7 +25,7 @@ class USPSpider(BaseSpider):
             next_page = hxs.select('//div[@class="CorpoPaginacao"]/a[last()-1]/@href').extract()[0]
             yield Request(urljoin(self.base_url, next_page), callback=self.parse)
         except:
-            print 'finished listing fields'
+            pass
         for f in hxs.select('//div[@class="dadosLinha dadosCor1"] | //div[@class="dadosLinha dadosCor2"]'):
             item = FieldItem()
             item['name'] = f.select('.//div[@class="dadosAreaNome"]/a/text()').extract()[0]
@@ -32,8 +34,10 @@ class USPSpider(BaseSpider):
             item['url'] = urljoin(self.base_url, f.select('./div[@class="dadosAreaNome"]/a/@href').extract()[0])
             yield item
 
-class USPListThesisSpider(BaseSpider):
-    name = 'usp-list-thesis'
+class USPThesisSpider(BaseSpider):
+    """ Retrieve theses info.
+    """
+    name = 'usp-list-theses'
     allowed_domains = ['teses.usp.br']
     start_urls = []
     base_url = 'http://www.teses.usp.br'
@@ -42,15 +46,17 @@ class USPListThesisSpider(BaseSpider):
     def start_requests(self):
         for f in settings['FIELDS']:
             field = self.db.fields.find_one({'name': f})
-            yield Request(field['url'], callback=self.parse)
+            print 'Creating request for ', field['url']
+            yield Request(field['url'], callback=self.parse_theses_list)
 
-    def parse(self, response):
+    def parse_theses_list(self, response):
         hxs = HtmlXPathSelector(response)
+        print 'Parsing list'
         try:
             next_page = hxs.select('//div[@class="CorpoPaginacao"]/a[last()-1]/@href').extract()[0]
-            yield Request(urljoin(self.base_url, next_page), callback=self.parse)
+            yield Request(urljoin(self.base_url, next_page), callback=self.parse_theses_list)
         except:
-            print 'finished listing thesis from field'
+            print 'Finished listing thesis from field'
         for f in hxs.select('//div[@class="dadosLinha dadosCor1"] | //div[@class="dadosLinha dadosCor2"]'):
             item = ThesesItem()
             item['author'] = f.select('.//div[@class="dadosDocNome"]/a/text()').extract()[0]
@@ -62,33 +68,48 @@ class USPListThesisSpider(BaseSpider):
             item['year'] = int(f.select('.//div[@class="dadosDocAno"]/a/text()').extract()[0])
             yield item
 
-class USPThesisSpider(BaseSpider):
-    name = 'usp-download-thesis'
-    allowed_domains = [ 'teses.usp.br']
+class USPDownloadThesisSpider(BaseSpider):
+    """ Retrieve theses docs.
+    """
+    name = 'usp-theses-docs'
+    allowed_domains = ['teses.usp.br']
     start_urls = []
     base_url = 'http://www.teses.usp.br'
     db = Connection().theses
 
     def start_requests(self):
         for t in self.db.theses.find():
-            if 'data' in t and len(t['data']) > 10:
+            if 'data' in t and len(t['data']) > 0:
                 continue
-            request = Request(t['url'], callback=self.parse)
-            request.meta['thesis'] = t
-            yield request
+            # Create a request to download the pdf and process it
+            req = Request(urljoin(self.base_url, t['url']), callback=self.parse_thesis_spec)
+            req.meta['thesis'] = t
+            yield req
 
-    def parse(self, response):
+    def parse_thesis_spec(self, response):
         hxs = HtmlXPathSelector(response)
-        all_a = hxs.select('//a')
-        for a in all_a:
-            text = a.select('text()').extract()
-            if len(text) > 0 and text[0].endswith('.pdf'):
-                url = urljoin(self.base_url, a.select('@href').extract()[0])
-                request = Request(url, callback=self.put_document)
-                request.meta['thesis'] = response.meta['thesis']
-                yield request
+        thesis = response.meta['thesis']
 
-    def put_document(self, response):
+        thesis['data'] = hxs.select('.//div[@class="DocumentoTextoResumo"]/text()').extract()[0]
+        print 'downloaded data', thesis['data'][0:50], len(thesis['data'])
+        self.db.theses.save(thesis)
+
+        # Pdf download
+        #all_a = hxs.select('//a')
+        #for a in all_a:
+        #    text = a.select('text()').extract()
+
+            #if len(text) > 0 and text[0].endswith('.pdf'):
+                #url = urljoin(self.base_url, a.select('@href').extract()[0])
+
+                #
+                #print 'Downloading pdf from', url
+                #request = Request(url, callback=self.parse_doc)
+                #request.meta['thesis'] = response.meta['thesis']
+                #yield request
+
+    def parse_doc(self, response):
+        print 'Parsing pdf'
         thesis = response.meta['thesis']
 
         t = tempfile.NamedTemporaryFile()
@@ -97,5 +118,6 @@ class USPThesisSpider(BaseSpider):
         os.system('pdftotext %s' % t.name)
 
         thesis['data'] = open(t.name + '.txt').read()
-        print 'Saving thesis', thesis['author'], len(thesis['data'])
+        print 'Downloaded thesis (len=%d)' % (len(thesis['data']))
+        # Save it back
         self.db.theses.save(thesis)
