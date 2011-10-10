@@ -1,6 +1,10 @@
+# -*- coding: utf-8 -*-
+
 import operator
 import numpy
 from pymongo import Connection
+
+from ptbr import STOP_WORDS, SYMBOLS
 
 db = Connection().theses
 account = {}
@@ -13,25 +17,19 @@ print 'total:',account
 
 
 def get_bag_of_words(data):
-    # Cleanup numbers
-    for i in range(10):
-        data = data.replace('%d' % i, '')
+    # Remove symbols and numbers
+    for symbol in SYMBOLS:
+        data = data.replace(symbol, '')
+    for i in xrange(10):
+        data = data.replace(u'%d' % i, '')
 
-    # Cleanup separation chars
-    data = data.replace(',', ' ')
-    data = data.replace('/', ' ')
-    data = data.replace('(', ' ')
-    data = data.replace(')', ' ')
-    data = data.replace('.', ' ')
+    # Lower and convert to set
+    data = set(data.lower().split())
 
-    # Lower
-    data = data.lower()
+    # Convert to set and remove stop words
+    data = set(data) - STOP_WORDS
 
-    # Split everything
-    data = data.split()
-
-    # Convert to set
-    return set(data)
+    return data
 
 
 freqs = {}
@@ -54,9 +52,11 @@ for field in account:
 print 'Found frequencies, now filtering...'
 
 for name, field in freqs.items():
-    fcut = (numpy.max(field.values()) + numpy.mean(field.values()))/2.0
-    print '\tCut frequency for %s is %.2f' % (name, fcut)
+    fcut = (0.3*numpy.max(field.values()) + 0.7*numpy.mean(field.values()))/2.0
     freqs[name] = dict((k, v) for k, v in field.iteritems() if v > fcut)
-    print '\tLength: %d' % len(freqs[name])
+
+    max = numpy.max(freqs[name].values())
+    min = numpy.min(freqs[name].values())
+    print '\n%s (cut=%d, min=%d, max=%d)' % (name, fcut, min, max)
+    print '\tfeature dimension=%d' % len(freqs[name])
     print '\tMost frequent:', freqs[name].keys()[0:10]
-    print '\tMinimum frequency:', numpy.min(freqs[name].values())
