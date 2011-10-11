@@ -93,6 +93,55 @@ def mi():
             N += 1
         print 'Term: %s (A=%d, B=%d, C=%d, N=%d), MI=%.4f' % (term, A, B, C, N, I(A, B, C, N))
 
+def chi_sqr():
+    """ chi-square statistic (CHI)
+    A - ndocs where t and c co-occur
+    B - ndocs where t and not c occurs
+    C - ndocs where c and not t occurs
+    D - ndocs where neither c or t occurs
+    N - total of docs
+    """
+
+    def chisqr(A, B, C, D, N):
+        den = (A + C) * (B + D) * (A + B) * (C + D)
+        if den == 0:
+            return -10**5
+        return (N * (A * D - C * B)**2) / den
+
+    # Find one with data
+    doc = db.theses.find_one({'data': { '$exists': True }})
+    bag = bag_of_words(doc['data'])
+    field = doc['field']
+
+    print 'Computing chi^2 for category', field
+    # Compute I(t, c) for each bag term
+    for term in bag:
+        A = 0
+        B = 0
+        C = 0
+        D = 0
+        N = 0
+
+        for doc in db.theses.find():
+            if not has_data(doc):
+                continue
+
+            _bag = bag_of_words(doc['data'])
+
+            if doc['field'] == field and term in _bag:
+                A += 1
+            elif doc['field'] != field and term in _bag:
+                B += 1
+            elif doc['field'] == field and term not in _bag:
+                C += 1
+            else:
+                D += 1
+
+            N += 1
+        print 'Term: %s (A=%d, B=%d, C=%d, D=%d, N=%d), chi^2=%.4f' % (term, A, B, C, D, N, chisqr(A, B, C, D, N))
+
+
 if __name__ == '__main__':
-    #df()
+    df()
     mi()
+    chi_sqr()
