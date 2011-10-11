@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
-
 import operator
 import numpy
+
 from pymongo import Connection
 
-from ptbr import STOP_WORDS, SYMBOLS
+from bag import bag_of_words
 
 db = Connection().theses
 db.features.ensure_index('field')
 
 account = {}
+freqs = {}
+
 for t in db.theses.find():
     if 'data' in t and len(t['data']) > 10:
         if t['field'] not in account:
@@ -17,24 +19,6 @@ for t in db.theses.find():
         account[t['field']] += 1
 print 'total:',account
 
-
-def get_bag_of_words(data):
-    # Remove symbols and numbers
-    for symbol in SYMBOLS:
-        data = data.replace(symbol, '')
-    for i in xrange(10):
-        data = data.replace(u'%d' % i, '')
-
-    # Lower and convert to set
-    data = set(data.lower().split())
-
-    # Convert to set and remove stop words
-    data = set(data) - STOP_WORDS
-
-    return data
-
-
-freqs = {}
 for field in account:
     print 'Creating frequency map for', field
     f = {}
@@ -43,7 +27,7 @@ for field in account:
         if 'data' not in t:
             continue
 
-        bag = get_bag_of_words(t['data'])
+        bag = bag_of_words(t['data'])
         for item in bag:
             if item not in f:
                 f[item] = 1

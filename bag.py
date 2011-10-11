@@ -22,3 +22,28 @@ STOP_WORDS = set([
     u'tivessem', u'tiver', u'tivermos', u'tiverem', u'terei', u'terá', u'teremos', u'terão', u'teria', u'teríamos', u'teriam'])
 
 SYMBOLS = list(set('\\/.,()[]%:;^~`\'!\"=+-_<>?'))
+
+def clean(data):
+    """ Remove symbols and numbers """
+    # Remove symbols and numbers
+    for symbol in SYMBOLS:
+        data = data.replace(symbol, '')
+    for i in xrange(10):
+        data = data.replace(u'%d' % i, '')
+    return data
+
+def bag_of_words(data):
+    # Lower and convert to set
+    data = set(clean(data).lower().split())
+    # Convert to set and remove stop words
+    data = set(data) - STOP_WORDS
+    return data
+
+def frequency_bag(data):
+    bag = bag_of_words(data)
+    freq_bag = {}
+    # Lower and convert to set
+    data = clean(data).lower().split()
+    for w in bag:
+        freq_bag[w] = data.count(w)
+    return freq_bag
