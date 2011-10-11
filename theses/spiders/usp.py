@@ -3,6 +3,8 @@ from scrapy.selector import HtmlXPathSelector
 from scrapy.http import Request
 from scrapy.conf import settings
 
+from scrapy import log
+
 from urlparse import urljoin
 from theses.items import *
 from pymongo import Connection
@@ -90,27 +92,30 @@ class USPDownloadThesisSpider(BaseSpider):
         hxs = HtmlXPathSelector(response)
         thesis = response.meta['thesis']
 
-        thesis['data'] = hxs.select('.//div[@class="DocumentoTextoResumo"]/text()').extract()[0]
-        print 'downloaded data', thesis['data'][0:50], len(thesis['data'])
-        self.db.theses.save(thesis)
-
         # Pdf download
-        #all_a = hxs.select('//a')
-        #for a in all_a:
-        #    text = a.select('text()').extract()
+        all_a = hxs.select('//a')
+        urls = []
+        for a in all_a:
+            text = a.select('text()').extract()
+            if len(text) > 0 and text[0].endswith('.pdf'):
+                urls.append(a.select('@href').extract()[0])
 
-            #if len(text) > 0 and text[0].endswith('.pdf'):
-                #url = urljoin(self.base_url, a.select('@href').extract()[0])
+        if len(urls) == 0:
+            # Invalidate damned fragmented theses with many pdfs
+            log.msg('Invalid thesis, no files', level=log.WARNING, spider=self)
+            return
+        elif len(urls) > 1:
+            log.msg('Many pdfs, considering only first', level=log.WARNING, spider=self)
 
-                #
-                #print 'Downloading pdf from', url
-                #request = Request(url, callback=self.parse_doc)
-                #request.meta['thesis'] = response.meta['thesis']
-                #yield request
+        url = urljoin(self.base_url, urls[0])
+        log.msg('Downloading pdf from %s' % url, level=log.INFO, spider=self)
+        request = Request(url, callback=self.parse_doc)
+        request.meta['thesis'] = response.meta['thesis']
+        yield request
 
     def parse_doc(self, response):
-        print 'Parsing pdf'
         thesis = response.meta['thesis']
+        log.msg('Parsing pdf for thesis %s' % thesis['author'], level=log.DEBUG, spider=self)
 
         t = tempfile.NamedTemporaryFile()
         t.write(response.body)
@@ -118,6 +123,6 @@ class USPDownloadThesisSpider(BaseSpider):
         os.system('pdftotext %s' % t.name)
 
         thesis['data'] = open(t.name + '.txt').read()
-        print 'Downloaded thesis (len=%d)' % (len(thesis['data']))
+        log.msg('Downloaded thesis (len=%d)' % (len(thesis['data'])), level=log.DEBUG, spider=self)
         # Save it back
         self.db.theses.save(thesis)
