@@ -52,6 +52,45 @@ def df():
 
         db.features.update({"field": name}, {"field": name, "features": freqs[name]}, upsert=True)
 
+
+def contingency_table():
+    """ Table format:
+
+    term: {'field1': A1,
+           'field2': A2, ... }
+
+    # ndocs where term and category 'field1' occur
+    A = term['field1']
+
+    # ndocs where t and other category than 'field1' occur
+    d = copy(term)
+    d.pop('field1')
+    B = sum(d.values())
+
+    # Ndocs where 'field1' and not term occurs
+    docs = db.terms.find({'term': {'$ne': term}}, {'field1': True})
+    for d in docs:
+        C += sum(d.values())
+
+    # Ndocs where neither occur
+    docs = db.terms.find({'term': {'$ne': term}, 'field1': {'$lt': 1}})
+
+    A - ndocs where t and c co-occur
+    B - ndocs where t and not c occurs
+    C - ndocs where c and not t occurs
+    D - neither c or t occurs
+    N - total of docs
+    """
+    db.terms.ensure_index('term')
+
+    fields = set()
+    for t in db.theses.find({}, {"field": 1}):
+        fields |= set([t['field']])
+    fields = list(fields)
+    print 'Found fields', fields
+
+    # TODO write table
+
 def mi():
     """ Mutual Information for term t and category c
 
@@ -142,6 +181,7 @@ def chi_sqr():
 
 
 if __name__ == '__main__':
-    df()
+#    df()
     mi()
     chi_sqr()
+    contingency_table()
