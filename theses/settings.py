@@ -9,9 +9,12 @@
 
 BOT_NAME = 'ufcg-pattern-recog-AndreDieb'
 BOT_VERSION = '1.0'
-CONCURRENT_REQUESTS_PER_SPIDER = 5
+CONCURRENT_SPIDERS = 1
+CONCURRENT_REQUESTS_PER_SPIDER = 1
+CONCURRENT_REQUESTS = 1
 CONCURRENT_ITEMS = 50
 DOWNLOADER_DEBUG = True
+DOWNLOAD_DELAY = 1
 #LOG_LEVEL='INFO'
 
 SPIDER_MODULES = ['theses.spiders']
@@ -27,4 +30,4 @@ MINIMUM_SIZE = 50
 
 # Tests #0
 # > db.fields.find({size: {$lt: 60}}, {name: 1, size: 1})
-FIELDS = ['Genética', 'Geotectônica', 'Planejamento Urbano e Regional', 'Engenharia Mecânica de Energia de Fluídos', 'Processamento de Sinais e Instrumentação']
+FIELDS = ['Genética', 'Geotectônica', 'Engenharia de Sistemas', 'Engenharia Mecânica de Energia de Fluídos', 'Processamento de Sinais e Instrumentação']
