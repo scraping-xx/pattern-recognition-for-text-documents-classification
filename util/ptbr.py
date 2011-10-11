@@ -21,4 +21,4 @@ STOP_WORDS = set([
     u'tive', u'teve', u'tivemos', u'tiveram', u'tivera', u'tivéramos', u'tenha', u'tenhamos', u'tenham', u'tivesse', u'tivéssemos',
     u'tivessem', u'tiver', u'tivermos', u'tiverem', u'terei', u'terá', u'teremos', u'terão', u'teria', u'teríamos', u'teriam'])
 
-SYMBOLS = list(set('\\/.,()[]%'))
+SYMBOLS = list(set('\\/.,()[]%:;^~`\'!\"=+-_<>?'))
