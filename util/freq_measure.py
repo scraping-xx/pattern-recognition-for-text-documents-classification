@@ -7,6 +7,8 @@ from pymongo import Connection
 from ptbr import STOP_WORDS, SYMBOLS
 
 db = Connection().theses
+db.features.ensure_index('field')
+
 account = {}
 for t in db.theses.find():
     if 'data' in t and len(t['data']) > 10:
@@ -60,3 +62,5 @@ for name, field in freqs.items():
     print '\n%s (cut=%d, min=%d, max=%d)' % (name, fcut, min, max)
     print '\tfeature dimension=%d' % len(freqs[name])
     print '\tMost frequent:', freqs[name].keys()[0:10]
+
+    db.features.update({"field": name}, {"field": name, "features": freqs[name]}, upsert=True)
