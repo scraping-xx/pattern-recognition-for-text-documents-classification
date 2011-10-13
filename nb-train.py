@@ -7,6 +7,7 @@ import subprocess
 import sys
 import os
 import os.path
+import time
 
 from pymongo import Connection
 
@@ -50,26 +51,26 @@ def train(classes, docs):
         print '  Computing term frequency...'
         nterm = {}
 
-        print '  big text'
+        a = time.time()
+        print '  Joining all class docs...',
         textfile = tempfile.NamedTemporaryFile()
         for doc in docs.find({'field': cls}):
             if not data_valid(doc): continue
             textfile.write((' '.join(tokenize(doc['data'])) + ' ').encode('utf-8', 'replace'))
         textfile.flush()
-        print '  counting..'
+        print 'took %.4f secs to write.' % (time.time() - a)
 
+        print '  Counting...'
         for term in vocabulary:
             if term not in nterm:
                 nterm[term] = 0
 
             os.system(("tr -cs 'A-Za-z' '\\n' < %s | grep -c '%s' > count" % (textfile.name, term)).encode('utf-8', 'replace'))
             count = int(open('count', 'r').read())
-            print '%d/%d, n=%d' % (vocabulary.keys().index(term), len(vocabulary), count)
 
             if count > 1000:
-                print 'Warning: term %s has over 1k occurences (n=%d)' % (term, count)
+                print '    Warning: term %s has over 1k occurences (n=%d)' % (term, count)
             nterm[term] += count
-        print 'Done'
 
         print '  Computing conditional probabilities...',
         for term in vocabulary:
@@ -79,9 +80,6 @@ def train(classes, docs):
                 cond[term][cls] = {}
             cond[term][cls] = (nterm[term] + 1)/float(sum([t + 1 for t in nterm.values()]))
         print 'Done'
-
-        print cond
-
     return vocabulary, prior, cond
 
 
@@ -101,3 +99,5 @@ if __name__ == '__main__':
     print 'Vocabulary: ', len(voc)
     print 'Prior:', prior
     print 'Cond.:', cond
+
+    open('training_result.py', 'w').write(('vocabulary=%s\nprior=%s\ncond=%s\n' % (voc, prior, cond)).encode('utf-8', 'replace'))
