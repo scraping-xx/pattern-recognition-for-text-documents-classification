@@ -19,22 +19,26 @@ STOP_WORDS = set([
     u'sejamos', u'sejam', u'fosse', u'fôssemos', u'fossem', u'for', u'formos', u'forem', u'serei', u'será', u'seremos',
     u'serão', u'seria', u'seríamos', u'seriam', u'tenho', u'tem', u'temos', u'tém', u'tinha', u'tínhamos', u'tinham',
     u'tive', u'teve', u'tivemos', u'tiveram', u'tivera', u'tivéramos', u'tenha', u'tenhamos', u'tenham', u'tivesse', u'tivéssemos',
-    u'tivessem', u'tiver', u'tivermos', u'tiverem', u'terei', u'terá', u'teremos', u'terão', u'teria', u'teríamos', u'teriam'])
+    u'tivessem', u'tiver', u'tivermos', u'tiverem', u'terei', u'terá', u'teremos', u'terão', u'teria', u'teríamos', u'teriam',
+    u'ver'])
 
-SYMBOLS = list(set('\\/.,()[]%:;^~`\'!\"=+-_<>?'))
+SYMBOLS = list(set(u'\\/.,()[]%:;^~`\'!\"=+-_<>?'))
 
 def clean(data):
     """ Remove symbols and numbers """
     # Remove symbols and numbers
     for symbol in SYMBOLS:
-        data = data.replace(symbol, '')
+        data = data.replace(symbol, u' ')
     for i in xrange(10):
-        data = data.replace(u'%d' % i, '')
+        data = data.replace(u'%d' % i, u'')
     return data
+
+def tokenize(data, threshold=3):
+    return filter(lambda k: len(k) > threshold, clean(data).lower().split())
 
 def bag_of_words(data):
     # Lower and convert to set
-    data = set(clean(data).lower().split())
+    data = set(tokenize(data))
     # Convert to set and remove stop words
     data = set(data) - STOP_WORDS
     return data
