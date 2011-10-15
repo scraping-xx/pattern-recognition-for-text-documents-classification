@@ -14,6 +14,7 @@ def data_valid(doc):
 def nb_classify(classes, vocabulary, prior, cond, doc):
     tokens = tokenize(doc['data'])
     score = {}
+
     for cls in classes:
         score[cls] = numpy.log(prior[cls])
 

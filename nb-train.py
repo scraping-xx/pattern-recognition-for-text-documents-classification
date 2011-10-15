@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import numpy
@@ -8,13 +9,13 @@ import sys
 import os
 import os.path
 import time
+import cStringIO as StringIO
 
 from pymongo import Connection
 
-db = Connection().theses
-
 from bag import tokenize, bag_of_words
 
+db = Connection().theses
 
 def data_valid(doc):
     return True if 'data' in doc and len(doc['data']) > 0 else False
@@ -30,9 +31,15 @@ def extract_vocabulary(docs):
             else:
                 f[term] += 1
 
-    # TODO change this
-    mean = (numpy.max(f.values()) + numpy.mean(f.values()))/2.0
-    return dict(filter(lambda n: n[1] >= mean, f.iteritems()))
+    cut = (numpy.max(f.values()) + numpy.mean(f.values()))/2.0
+    return dict(filter(lambda n: n[1] >= cut, f.iteritems()))
+
+def term_count_naive(vocabulary, textfile):
+    nterm = dict.fromkeys(vocabulary, 0)
+    for term in textfile.getvalue().split():
+        if term in vocabulary:
+            nterm[term] += 1
+    return nterm
 
 def train(classes, docs):
     n = docs.count()
@@ -53,24 +60,20 @@ def train(classes, docs):
 
         a = time.time()
         print '  Joining all class docs...',
-        textfile = tempfile.NamedTemporaryFile()
+        textfile = StringIO.StringIO()
         for doc in docs.find({'field': cls}):
             if not data_valid(doc): continue
             textfile.write((' '.join(tokenize(doc['data'])) + ' ').encode('utf-8', 'replace'))
-        textfile.flush()
         print 'took %.4f secs to write.' % (time.time() - a)
 
-        print '  Counting...'
-        for term in vocabulary:
-            if term not in nterm:
-                nterm[term] = 0
+        a = time.time()
+        s = textfile.getvalue()
+        print 'took %.4f secs to retrieve string.' % (time.time() - a)
 
-            os.system(("tr -cs 'A-Za-z' '\\n' < %s | grep -c '%s' > count" % (textfile.name, term)).encode('utf-8', 'replace'))
-            count = int(open('count', 'r').read())
-
-            if count > 1000:
-                print '    Warning: term %s has over 1k occurences (n=%d)' % (term, count)
-            nterm[term] += count
+        #nterm = term_count_bruteforce(vocabulary, textfile)
+        a = time.time()
+        nterm = term_count_naive(vocabulary, textfile)
+        print 'took %.4f secs to count.' % (time.time() - a)
 
         print '  Computing conditional probabilities...',
         for term in vocabulary:
