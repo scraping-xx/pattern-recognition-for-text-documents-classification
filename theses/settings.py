@@ -28,6 +28,4 @@ ITEM_PIPELINES = ['theses.pipelines.LowPassPipeline',
 # Theses-specific settings
 MINIMUM_SIZE = 50
 
-# Tests #0
-# > db.fields.find({size: {$lt: 60}}, {name: 1, size: 1})
-FIELDS = ['Genética', 'Geotectônica', 'Engenharia de Sistemas', 'Engenharia Mecânica de Energia de Fluídos', 'Processamento de Sinais e Instrumentação']
+FIELDS = ['Biotecnologia', 'Engenharia Elétrica', 'Enfermagem Psiquiátrica', 'Genética', 'Geotectônica', 'Engenharia de Sistemas', 'Engenharia Mecânica de Energia de Fluídos', 'Processamento de Sinais e Instrumentação']

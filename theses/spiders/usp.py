@@ -7,6 +7,7 @@ from scrapy import log
 
 from urlparse import urljoin
 from theses.items import *
+
 from pymongo import Connection
 
 import tempfile

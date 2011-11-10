@@ -35,7 +35,7 @@ def extract_vocabulary(docs):
             else:
                 f[term] += 1
 
-    cut = (numpy.max(f.values()) + numpy.mean(f.values()))/2.0
+    cut = (numpy.max(f.values()) + numpy.mean(f.values()))/4.0
     return dict(filter(lambda n: n[1] >= cut, f.iteritems()))
 
 def term_count_naive(vocabulary, text):
@@ -87,24 +87,34 @@ def train(classes, docs):
             cond[term][cls] = (nterm[term] + 1)/float(sum([t + 1 for t in nterm.values()]))
     return vocabulary, prior, cond
 
-def build_experiment():
+def build_experiment(classes):
     """ Builds the experiment set by assigning half of the available documents for training
     and the other half for testing. This is stupid and should be changed.
     """
-    total_docs = db.theses.count()
-    training_docs = db.theses.find().limit(int(0.5*total_docs))
+    count = {}
+    ratio = 0.5
 
-    for doc in training_docs:
-        db.training.save(doc, safe=True)
+    db.training.drop()
+    db.testing.drop()
 
-    for doc in db.theses.find().skip(int(0.5*total_docs)):
-        db.testing.save(doc, safe=True)
+    print 'Classes accounting:'
+    for cls in classes:
+        count[cls] = db.theses.find({'field': cls, 'data': {'$exists': True}}).count()
+        print '\t%s\t%d' % (cls, count[cls])
+
+    for cls in classes:
+        for doc in db.theses.find({'field': cls, 'data': {'$exists': True}}).limit(int(ratio * count[cls])):
+            db.training.save(doc, safe=True)
+        for doc in db.theses.find({'field': cls, 'data': {'$exists': True}}).skip(int(ratio * count[cls])):
+            db.testing.save(doc, safe=True)
+
+    print 'Built experiment, train/test per class document ratio: %.2f' % ratio
 
 if __name__ == '__main__':
-    # Uncomment the following line the first time you run this.
-    #build_experiment()
-
     classes = list(set([d['field'] for d in db.theses.find({}, {'field': 1})]))
+
+    # Uncomment the following line the first time you run this.
+    build_experiment(classes)
 
     print 'Training...',
     voc, prior, cond = train(classes, db.training)
