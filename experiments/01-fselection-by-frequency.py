@@ -53,7 +53,7 @@ class Experiment(NaiveBayesClassifier):
 
             log.debug('\tPrecision=%.3f, Recall=%.3f, F1=%.3f', precision, recall, f1)
 
-        log.info('Global accuracy: %.2f %%', success/float(success + errors))
+        log.info('Global accuracy: %.2f %%', 100.0 * success/float(success + errors))
 
     def build_experiment(self, classes):
         """ Builds the experiment set by assigning half of the available documents for training
