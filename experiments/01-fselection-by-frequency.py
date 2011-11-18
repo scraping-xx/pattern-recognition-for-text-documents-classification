@@ -13,7 +13,8 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(filename)s:%(func
 
 class Experiment(NaiveBayesClassifier):
 
-    def __init__(self):
+    def __init__(self, ratio=0.5):
+        self.ratio = ratio
         classes = database.get_classes()
         super(Experiment, self).__init__(classes, *self.build_experiment(classes))
 
@@ -24,31 +25,37 @@ class Experiment(NaiveBayesClassifier):
 
     def test(self):
         stats = dict.fromkeys(self.classes)
+        success = 0.0
+        errors = 0.0
         for k in stats:
-            stats[k] = {'success': 0, 'errors': 0}
+            stats[k] = {'tp': 0 , 'fp': 0, 'fn': 0, 'tn': 0}
 
         for doc in self.testing_docs.find():
             if not database.doc_has_data(doc):
                 continue
 
-            if doc['field'] == self.classify(doc):
-                stats[doc['field']]['success'] += 1
+            cls = self.classify(doc)
+            if doc['field'] == cls:
+                success += 1
+                stats[cls]['tp'] += 1
                 log.debug('Success (%s/%s)', doc['author'], doc['field'])
             else:
-                stats[doc['field']]['errors'] += 1
+                errors += 1
+
+                # doc['field'] is the correct label, cls is wrong.
+                # Account a false positive at the correct label: doc['field']
+                stats[doc['field']]['fp'] += 1
+
+                # Account a false negative: cls
+                stats[cls]['fn'] += 1
                 log.debug('Error (%s/%s)', doc['author'], doc['field'])
 
         log.debug(stats)
 
-        success = 0.0
-        errors = 0.0
-
         for cls, stat in stats.iteritems():
-            log.info('Class %s (fp=%d,tp=%d)', cls, stat['errors'], stat['success'])
-            success += stat['success']
-            errors += stat['errors']
-            precision = stat['success']/float(sum(stat.values()))
-            recall = stat['success']/float(stat['success'] + 0)
+            log.info('Class %s (tp=%d,fp=%d,fn=%d,tn=%d)', cls, stat['tp'], stat['fp'], stat['fn'], stat['tn'])
+            precision = stat['tp']/float(stat['tp'] + stat['fp'])
+            recall = stat['tp']/float(stat['tp'] + stat['fn'])
             f1 = 2.0 * precision * recall / (precision + recall)
 
             log.debug('\tPrecision=%.3f, Recall=%.3f, F1=%.3f', precision, recall, f1)
@@ -62,10 +69,13 @@ class Experiment(NaiveBayesClassifier):
         log.info("building experiment..")
 
         count = {}
-        ratio = 0.5
+        ratio = self.ratio
 
         db.training.drop()
         db.testing.drop()
+
+        db.training.ensure_index('field')
+        db.testing.ensure_index('field')
 
         log.debug('classes accounting:')
         for cls in classes:
@@ -92,12 +102,10 @@ class Experiment(NaiveBayesClassifier):
                 continue
 
             for term in bag.bag_of_words(doc['data']):
-                if term not in f:
-                    f[term] = 1
-                else:
-                    f[term] += 1
+                f.setdefault(term, 1)
+                f[term] += 1
 
-        cut = (numpy.max(f.values()) + numpy.mean(f.values()))/4.0
+        cut = (numpy.max(f.values()) + numpy.mean(f.values()))/8.0
         higher = dict(filter(lambda n: n[1] >= cut, f.iteritems()))
         log.info('selected %d terms', len(higher))
         return higher
