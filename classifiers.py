@@ -1,14 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import time
 import numpy
 import operator
+import logging
 
 import cStringIO as StringIO
 
 import database
 
 from bag import tokenize
+
+log = logging.getLogger(__file__)
 
 class NaiveBayesClassifier(object):
 
@@ -38,6 +42,9 @@ class NaiveBayesClassifier(object):
         prior = {}
         cond = {}
 
+        log.debug('starting training on %d documents..', n)
+        start_time = time.time()
+
         for cls in self.classes:
             # Compute prior probabilities
             nc = docs.find({'field': cls}).count()
@@ -66,6 +73,8 @@ class NaiveBayesClassifier(object):
                     cond[term][cls] = {}
                 cond[term][cls] = (nterm[term] + 1)/float(sum([t + 1 for t in nterm.values()]))
 
+        log.debug('finished training (took %.3f secs)', time.time() - start_time)
+
         self.prior = prior
         self.cond = cond
 
@@ -78,7 +87,9 @@ class NaiveBayesClassifier(object):
         for cls in self.classes:
             score[cls] = numpy.log(self.prior[cls])
             for term in tokens:
-                score[cls] += numpy.log(self.cond.get(term, {}).get(cls, 1.0))
+                if term not in self.cond:
+                    continue
+                score[cls] += numpy.log(self.cond[term][cls])
 
         return max(score.iteritems(), key=operator.itemgetter(1))[0]
 

@@ -26,7 +26,6 @@ SYMBOLS = list(set(u'\\/.,()[]%:;^~`\'!\"=+-_<>?'))
 
 def clean(data):
     """ Remove symbols and numbers """
-    # Remove symbols and numbers
     for symbol in SYMBOLS:
         data = data.replace(symbol, u' ')
     for i in xrange(10):

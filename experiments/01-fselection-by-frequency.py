@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+import time
 import numpy
 import logging
+import datetime
 
 import bag
 import database
@@ -21,7 +23,8 @@ class Experiment(NaiveBayesClassifier):
     def run(self):
         self.features = self.select_features()
         self.train()
-        self.test()
+        results = self.test()
+        return results
 
     def test(self):
         stats = dict.fromkeys(self.classes)
@@ -50,7 +53,7 @@ class Experiment(NaiveBayesClassifier):
                 stats[cls]['fn'] += 1
                 log.debug('Error (%s/%s)', doc['author'], doc['field'])
 
-        log.debug(stats)
+        info_stats = {}
 
         for cls, stat in stats.iteritems():
             log.info('Class %s (tp=%d,fp=%d,fn=%d,tn=%d)', cls, stat['tp'], stat['fp'], stat['fn'], stat['tn'])
@@ -60,14 +63,22 @@ class Experiment(NaiveBayesClassifier):
 
             log.debug('\tPrecision=%.3f, Recall=%.3f, F1=%.3f', precision, recall, f1)
 
-        log.info('Global accuracy: %.2f %%', 100.0 * success/float(success + errors))
+            info_stats[cls] = {}
+            info_stats[cls]['precision'] = precision
+            info_stats[cls]['recall'] = recall
+            info_stats[cls]['f1'] = f1
+            info_stats[cls]['features'] = len(self.features)
+
+        global_accuracy = success/float(success + errors)
+
+        log.info('Global accuracy: %.2f %%', global_accuracy * 100.0)
+
+        return (info_stats, global_accuracy)
 
     def build_experiment(self, classes):
         """ Builds the experiment set by assigning half of the available documents for training
         and the other half for testing. This is stupid and should be changed.
         """
-        log.info("building experiment..")
-
         count = {}
         ratio = self.ratio
 
@@ -82,18 +93,22 @@ class Experiment(NaiveBayesClassifier):
             count[cls] = db.theses.find({'field': cls, 'data': {'$exists': True}}).count()
             log.debug('\t%s\t%d', cls, count[cls])
 
+        log.debug('building experiment..')
+        start_time = time.time()
+
         for cls in classes:
             for doc in db.theses.find({'field': cls, 'data': {'$exists': True}}).limit(int(ratio * count[cls])):
                 db.training.save(doc, safe=True)
             for doc in db.theses.find({'field': cls, 'data': {'$exists': True}}).skip(int(ratio * count[cls])):
                 db.testing.save(doc, safe=True)
 
-        log.info('built experiment, train/test per class document ratio: %.2f', ratio)
+        log.info('built experiment, train/test per class document ratio: %.2f (took %.3f secs)', ratio, time.time() - start_time)
         return (db.training, db.testing)
 
     def select_features(self):
         """ Select most frequent terms.
         """
+        start_time = time.time()
         log.info('selecting features..')
 
         f = {}
@@ -107,11 +122,26 @@ class Experiment(NaiveBayesClassifier):
 
         cut = (numpy.max(f.values()) + numpy.mean(f.values()))/8.0
         higher = dict(filter(lambda n: n[1] >= cut, f.iteritems()))
-        log.info('selected %d terms', len(higher))
+        log.info('selected %d terms (took %.3f secs)', len(higher), time.time() - start_time)
         return higher
 
 def run():
-    Experiment().run()
+    data = {}
+    ratios = [k*0.05 for k in range(3, 20)]
+    for r in ratios:
+        print 'Running experiment for ratio=', r
+        data[r] = Experiment(r).run()
+
+    print 'Result:', data
+
+    fname = datetime.datetime.now().strftime('%Y%m%d%H%M') + '_results.py'
+    print 'Saving to file..', fname
+    open(fname, 'w').write('data=' + str(data))
 
 if __name__ == '__main__':
-    run()
+    import cProfile
+    import pstats
+    cProfile.run('run()', 'profiling')
+
+    p = pstats.Stats('profiling')
+    p.sort_stats('time').print_stats(0.1)
