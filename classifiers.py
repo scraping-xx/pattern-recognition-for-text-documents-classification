@@ -69,8 +69,6 @@ class NaiveBayesClassifier(object):
             for term in self.features:
                 if term not in cond:
                     cond[term] = {}
-                if cls not in cond[term]:
-                    cond[term][cls] = {}
                 cond[term][cls] = (nterm[term] + 1)/float(sum([t + 1 for t in nterm.values()]))
 
         log.debug('finished training (took %.3f secs)', time.time() - start_time)

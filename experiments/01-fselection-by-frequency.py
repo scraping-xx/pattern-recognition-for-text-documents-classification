@@ -13,6 +13,7 @@ from classifiers import NaiveBayesClassifier
 log = logging.getLogger(__file__)
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(filename)s:%(funcName)s(%(lineno)d)\t%(message)s', datefmt='%H:%M:%S')
 
+
 class Experiment(NaiveBayesClassifier):
 
     def __init__(self, ratio=0.5):
@@ -126,22 +127,23 @@ class Experiment(NaiveBayesClassifier):
         return higher
 
 def run():
+    import os.path
     data = {}
+
     ratios = [k*0.05 for k in range(3, 20)]
     for r in ratios:
         print 'Running experiment for ratio=', r
         data[r] = Experiment(r).run()
 
-    print 'Result:', data
-
     fname = datetime.datetime.now().strftime('%Y%m%d%H%M') + '_results.py'
-    print 'Saving to file..', fname
-    open(fname, 'w').write('data=' + str(data))
+    path = os.path.join('results', fname)
+    open(path, 'w').write('data=' + str(data))
+    print 'Saved results to file:', path
 
 if __name__ == '__main__':
     import cProfile
     import pstats
-    cProfile.run('run()', 'profiling')
 
+    cProfile.run('run()', 'profiling')
     p = pstats.Stats('profiling')
-    p.sort_stats('time').print_stats(0.1)
+    p.sort_stats('time').print_stats(0.2)
