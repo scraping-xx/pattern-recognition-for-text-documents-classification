@@ -97,12 +97,26 @@ class Experiment(NaiveBayesClassifier):
         log.debug('building experiment..')
         start_time = time.time()
 
-        for cls in classes:
-            for doc in db.theses.find({'field': cls, 'data': {'$exists': True}}).limit(int(ratio * count[cls])):
-                db.training.save(doc, safe=True)
-            for doc in db.theses.find({'field': cls, 'data': {'$exists': True}}).skip(int(ratio * count[cls])):
-                db.testing.save(doc, safe=True)
+        trained = dict.fromkeys(classes, 0)
+        test = dict.fromkeys(classes, 0)
 
+        for cls in classes:
+            docs = db.theses.find({'field': cls, 'data': {'$exists': True}})
+            size = docs.count()
+            indexes = range(size)
+            numpy.random.shuffle(indexes)
+            training = indexes[:int(ratio * count[cls])]
+            i = 0
+            for doc in docs:
+                if i in training:
+                    db.training.save(doc, safe=True)
+                    trained[cls] += 1
+                else:
+                    db.testing.save(doc, safe=True)
+                    test[cls] += 1
+                i += 1
+
+        log.debug('trained=%s, test=%s', str(trained), str(test))
         log.info('built experiment, train/test per class document ratio: %.2f (took %.3f secs)', ratio, time.time() - start_time)
         return (db.training, db.testing)
 
@@ -135,7 +149,7 @@ def run():
         print 'Running experiment for ratio=', r
         data[r] = Experiment(r).run()
 
-    fname = datetime.datetime.now().strftime('%Y%m%d%H%M') + '_results.py'
+    fname = 'training_ratio_' + datetime.datetime.now().strftime('%Y%m%d%H%M') + '_results.py'
     path = os.path.join('results', fname)
     open(path, 'w').write('data=' + str(data))
     print 'Saved results to file:', path
