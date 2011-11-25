@@ -10,7 +10,7 @@ import cStringIO as StringIO
 
 import database
 
-from bag import tokenize
+from bag import *
 
 log = logging.getLogger(__file__)
 
@@ -41,6 +41,7 @@ class NaiveBayesClassifier(object):
         n = docs.count()
         prior = {}
         cond = {}
+        memo = {}
 
         log.debug('starting training on %d documents..', n)
         start_time = time.time()
@@ -50,7 +51,7 @@ class NaiveBayesClassifier(object):
             nc = docs.find({'field': cls}).count()
 
             # Maximum Likelihood Estimate (MLE)
-            prior[cls] = nc/float(n)
+            prior[cls] = numpy.log(nc/float(n))
 
             # Join all documents for faster counting
             textfile = StringIO.StringIO()
@@ -65,11 +66,18 @@ class NaiveBayesClassifier(object):
                 if term in self.features:
                     nterm[term] += 1
 
+            # Precompute denominator for conditional prob. estimator
+            base = float(sum(nterm.values()) + len(nterm))
+
             # Compute conditional probabilities
             for term in self.features:
                 if term not in cond:
                     cond[term] = {}
-                cond[term][cls] = (nterm[term] + 1)/float(sum([t + 1 for t in nterm.values()]))
+                val = (nterm[term] + 1)/base
+                if val not in memo:
+                    memo[val] = numpy.log(val)
+
+                cond[term][cls] = memo[val]
 
         log.debug('finished training (took %.3f secs)', time.time() - start_time)
 
@@ -79,15 +87,17 @@ class NaiveBayesClassifier(object):
     def classify(self, doc):
         """ Classify the input document 'doc'.
         """
-        tokens = tokenize(doc['data'])
+        tokens = tokenize_map(doc['data'])
         score = {}
 
         for cls in self.classes:
-            score[cls] = numpy.log(self.prior[cls])
-            for term in tokens:
-                if term not in self.cond:
-                    continue
-                score[cls] += numpy.log(self.cond[term][cls])
+            score[cls] = self.prior[cls]
+
+        for term, count in tokens.iteritems():
+            if term not in self.cond:
+                continue
+            for cls in self.classes:
+                score[cls] += count * self.cond[term][cls]
 
         return max(score.iteritems(), key=operator.itemgetter(1))[0]
 

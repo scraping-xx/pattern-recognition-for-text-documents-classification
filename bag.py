@@ -35,6 +35,12 @@ def clean(data):
 def tokenize(data, threshold=3):
     return filter(lambda k: len(k) > threshold, clean(data).lower().split())
 
+def tokenize_map(data, threshold=3):
+    d = {}
+    for k in clean(data).lower().split():
+        d[k] = d.setdefault(k, 0) + 1
+    return d
+
 def bag_of_words(data):
     # Lower and convert to set
     data = set(tokenize(data))
