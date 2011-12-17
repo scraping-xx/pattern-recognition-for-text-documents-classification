@@ -26,7 +26,7 @@ The system was subject to the following experiment:
 Results
 -------
 By increasing the number of features, it was observed that the accuracy increases monotonically, as expected. The
-full results are shown in the final document (tcc.pdf).
+full results are shown in the final document (tcc.pdf in pt-BR).
 
 This system achieved 84.66% global accuracy when using 12359 features. Even with this huge number of features and a
 relatively big document space, it still achieved considerable speed, where training took 50 secs, classifying 20 secs
