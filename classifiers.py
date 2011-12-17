@@ -79,7 +79,7 @@ class NaiveBayesClassifier(object):
 
                 cond[term][cls] = memo[val]
 
-        log.debug('finished training (took %.3f secs)', time.time() - start_time)
+        log.info('finished training (took %.3f secs)', time.time() - start_time)
 
         self.prior = prior
         self.cond = cond
@@ -94,6 +94,7 @@ class NaiveBayesClassifier(object):
             score[cls] = self.prior[cls]
 
         for term, count in tokens.iteritems():
+            count = 1
             if term not in self.cond:
                 continue
             for cls in self.classes:
