@@ -32,6 +32,9 @@ This system achieved 84.66% global accuracy when using 12359 features. Even with
 relatively big document space, it still achieved considerable speed, where training took 50 secs, classifying 20 secs
 and extracting features 40 secs (total 110 secs all steps).
 
+Concerning processing, training and classification throughput figures were respectively 280k words
+per sec and 1.6k words per sec.
+
 Repeating the Experiment
 ------------------------
 
